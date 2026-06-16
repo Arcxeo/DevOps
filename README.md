@@ -1,3 +1,3 @@
-# DevOps-Lab01
+# DevOps-EFREI
 
-### Nicolas PAPLEU, Romain DANGIN, Ali Belhassen, Nail Fahim et Arnaud VAN EECKHOVEN
+### Nicolas PAPLEUX, Romain DANGIN, Ali BALHASSEN, et Arnaud VAN EECKHOVEN
