@@ -1,0 +1,129 @@
+pipeline {
+    agent {
+        label 'docker-agent'
+    }
+
+    options {
+        disableConcurrentBuilds()
+        skipDefaultCheckout(true)
+    }
+
+    environment {
+        DOCKER_HOST = 'tcp://192.168.56.20:2375'
+
+        // Remplace par ton vrai pseudo Docker Hub si différent
+        IMAGE_NAME = 'arnaudve/devops-lab02'
+
+        APP_CONTAINER = 'lab02-deployed-app'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install') {
+            steps {
+                dir('Lab 2/app') {
+                    sh 'npm ci'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('Lab 2/app') {
+                    sh 'npm test -- --runInBand'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    docker build \
+                        -t "$IMAGE_NAME:build-$BUILD_NUMBER" \
+                        -t "$IMAGE_NAME:latest" \
+                        "Lab 2/app"
+                '''
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKERHUB_USER',
+                        passwordVariable: 'DOCKERHUB_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+
+                        echo "$DOCKERHUB_TOKEN" | docker login \
+                            --username "$DOCKERHUB_USER" \
+                            --password-stdin
+
+                        docker push "$IMAGE_NAME:build-$BUILD_NUMBER"
+                        docker push "$IMAGE_NAME:latest"
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Application') {
+            steps {
+                sh '''
+                    docker rm -f lab02-app 2>/dev/null || true
+                    docker rm -f "$APP_CONTAINER" 2>/dev/null || true
+
+                    docker run -d \
+                        --name "$APP_CONTAINER" \
+                        --restart unless-stopped \
+                        -p 3000:3000 \
+                        "$IMAGE_NAME:build-$BUILD_NUMBER"
+                '''
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                    for attempt in 1 2 3 4 5 6 7 8 9 10
+                    do
+                        if curl -fsS http://192.168.56.20:3000
+                        then
+                            echo
+                            echo "Application successfully deployed."
+                            exit 0
+                        fi
+
+                        echo "Waiting for the application..."
+                        sleep 2
+                    done
+
+                    echo "Application did not start correctly."
+                    docker logs "$APP_CONTAINER"
+                    exit 1
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker logout || true'
+        }
+
+        success {
+            echo 'Pipeline completed successfully.'
+        }
+
+        failure {
+            echo 'Pipeline failed. Check the stage logs.'
+        }
+    }
+}
