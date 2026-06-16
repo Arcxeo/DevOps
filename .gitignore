@@ -1,12 +1,6 @@
-
-node_modules/
+**/.vagrant/
+**/node_modules/
+**/coverage/
+**/*.log
+**/.env
 npm-debug.log*
-package-lock.json
-
-.vagrant/
-
-*.log
-
-.DS_Store
-.idea/
-.vscode/
