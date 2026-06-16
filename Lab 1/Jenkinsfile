@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 pipeline {
     agent any
 
@@ -42,49 +41,4 @@ pipeline {
             }
         }
     }
-=======
-pipeline {
-    agent any
-
-    stages {
-        stage('Prepare') {
-            steps {
-                sh '''
-                rm -rf "$WORKSPACE/app-build"
-                mkdir -p "$WORKSPACE/app-build"
-                rsync -av --delete --exclude node_modules /vagrant/app/ "$WORKSPACE/app-build/"
-                '''
-            }
-        }
-
-        stage('Build') {
-            steps {
-                dir("${env.WORKSPACE}/app-build") {
-                    sh 'npm install'
-                }
-            }
-        }
-
-        stage('Test') {
-            steps {
-                dir("${env.WORKSPACE}/app-build") {
-                    sh 'npm test'
-                }
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                sh '''
-                rsync -av --delete --exclude node_modules "$WORKSPACE/app-build/" /opt/lab-app/
-                cd /opt/lab-app
-                npm install --omit=dev
-                sudo -n /usr/bin/systemctl restart lab-app
-                sleep 3
-                sudo -n /usr/bin/systemctl status lab-app
-                '''
-            }
-        }
-    }
->>>>>>> 6fef45c (Restructure project as Lab 1 and Lab 2 monorepo)
 }
