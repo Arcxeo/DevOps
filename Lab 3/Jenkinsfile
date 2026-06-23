@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(
+            name: 'ACTION',
+            choices: [
+                'ping',
+                'install_package',
+                'remove_package',
+                'install_app',
+                'remove_app',
+                'full_playbook'
+            ],
+            description: 'Choose which Ansible action to execute'
+        )
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Check Ansible') {
+            steps {
+                sh '''
+                    ansible --version
+                '''
+            }
+        }
+
+        stage('Ping targets') {
+            steps {
+                dir('Lab 3/ansible') {
+                    sh '''
+                        ansible -i inventory-jenkins.ini all -m ping
+                    '''
+                }
+            }
+        }
+
+        stage('Run Ansible action') {
+            steps {
+                dir('Lab 3/ansible') {
+                    script {
+                        if (params.ACTION == 'ping') {
+                            sh 'ansible -i inventory-jenkins.ini all -m ping'
+                        } else if (params.ACTION == 'full_playbook') {
+                            sh 'ansible-playbook -i inventory-jenkins.ini playbook.yml'
+                        } else {
+                            sh "ansible-playbook -i inventory-jenkins.ini playbook.yml --tags ${params.ACTION}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Ansible pipeline completed successfully.'
+        }
+
+        failure {
+            echo 'Ansible pipeline failed.'
+        }
+    }
+}

@@ -1,0 +1,80 @@
+---
+- name: Lab 3 - Configuration management with Ansible
+  hosts: all_targets
+  become: yes
+
+  vars:
+    system_package: tree
+    application_package: nginx
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      tags:
+        - always
+
+    - name: Install a system package
+      apt:
+        name: "{{ system_package }}"
+        state: present
+      tags:
+        - install_package
+
+    - name: Remove a system package
+      apt:
+        name: "{{ system_package }}"
+        state: absent
+        purge: yes
+      tags:
+        - remove_package
+
+    - name: Install application package
+      apt:
+        name: "{{ application_package }}"
+        state: present
+      tags:
+        - install_app
+
+    - name: Create custom application homepage
+      copy:
+        dest: /var/www/html/index.html
+        content: |
+          <html>
+            <body>
+              <h1>Lab 3 - Application deployed with Ansible</h1>
+              <p>This application was installed and configured automatically.</p>
+            </body>
+          </html>
+      tags:
+        - install_app
+
+    - name: Start nginx application
+      shell: "pgrep -x nginx || nginx"
+      args:
+        executable: /bin/bash
+      tags:
+        - install_app
+
+    - name: Check nginx process
+      shell: "pgrep -x nginx"
+      register: nginx_status
+      changed_when: false
+      tags:
+        - install_app
+
+    - name: Stop nginx application
+      shell: "nginx -s stop"
+      ignore_errors: yes
+      tags:
+        - remove_app
+
+    - name: Remove application package
+      apt:
+        name: "{{ application_package }}"
+        state: absent
+        purge: yes
+        autoremove: yes
+      tags:
+        - remove_app
