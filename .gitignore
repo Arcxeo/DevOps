@@ -1,6 +1,32 @@
+# Vagrant
 **/.vagrant/
+
+# Node.js
 **/node_modules/
 **/coverage/
-**/*.log
-**/.env
 npm-debug.log*
+
+# Logs
+**/*.log
+logs/
+
+# Environment files
+**/.env
+**/.env.*
+
+# Secrets / SSH keys
+**/*_key
+**/*_key.pub
+**/id_rsa
+**/id_rsa.pub
+**/*.pem
+**/*.key
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Jenkins / temporary
+**/workspace/
+**/tmp/
