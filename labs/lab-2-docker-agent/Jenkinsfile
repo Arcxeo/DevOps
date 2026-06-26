@@ -26,7 +26,7 @@ pipeline {
 
         stage('Install') {
             steps {
-                dir('Lab 2/app') {
+                dir('labs/lab-2-docker-agent/app') {
                     sh 'npm ci'
                 }
             }
@@ -34,7 +34,7 @@ pipeline {
 
         stage('Test') {
             steps {
-                dir('Lab 2/app') {
+                dir('labs/lab-2-docker-agent/app') {
                     sh 'npm test -- --runInBand'
                 }
             }
@@ -46,7 +46,7 @@ pipeline {
                     docker build \
                         -t "$IMAGE_NAME:build-$BUILD_NUMBER" \
                         -t "$IMAGE_NAME:latest" \
-                        "Lab 2/app"
+                        "labs/lab-2-docker-agent/app"
                 '''
             }
         }
