@@ -157,6 +157,8 @@ def notifyDiscord(String status) {
         )
     ]) {
         sh """
+            set +x
+
             if [ "${status}" = "SUCCESS" ]; then
                 COLOR=3066993
                 MESSAGE="✅ Jenkins pipeline succeeded"
@@ -165,33 +167,40 @@ def notifyDiscord(String status) {
                 MESSAGE="❌ Jenkins pipeline failed"
             fi
 
-            curl -H "Content-Type: application/json" \
-                 -X POST \
-                 -d "{
-                       \\"embeds\\": [{
-                         \\"title\\": \\"DevOps Final Project\\",
-                         \\"description\\": \\"${MESSAGE}\\",
-                         \\"color\\": ${COLOR},
-                         \\"fields\\": [
-                           {
-                             \\"name\\": \\"Job\\",
-                             \\"value\\": \\"${env.JOB_NAME}\\",
-                             \\"inline\\": true
-                           },
-                           {
-                             \\"name\\": \\"Build\\",
-                             \\"value\\": \\"#${env.BUILD_NUMBER}\\",
-                             \\"inline\\": true
-                           },
-                           {
-                             \\"name\\": \\"Image\\",
-                             \\"value\\": \\"${env.IMAGE_NAME}:${env.IMAGE_TAG}\\",
-                             \\"inline\\": false
-                           }
-                         ]
-                       }]
-                     }" \
-                 "${DISCORD_WEBHOOK_URL}"
+            cat > discord_payload.json <<EOF
+{
+  "embeds": [
+    {
+      "title": "DevOps Final Project",
+      "description": "\${MESSAGE}",
+      "color": \${COLOR},
+      "fields": [
+        {
+          "name": "Job",
+          "value": "${env.JOB_NAME}",
+          "inline": true
+        },
+        {
+          "name": "Build",
+          "value": "#${env.BUILD_NUMBER}",
+          "inline": true
+        },
+        {
+          "name": "Image",
+          "value": "${env.IMAGE_NAME}:${env.IMAGE_TAG}",
+          "inline": false
+        }
+      ]
+    }
+  ]
+}
+EOF
+
+            curl -fsS \
+              -H "Content-Type: application/json" \
+              -X POST \
+              --data @discord_payload.json \
+              "\${DISCORD_WEBHOOK_URL}"
         """
     }
 }
