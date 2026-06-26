@@ -33,7 +33,7 @@ pipeline {
 
         stage('Ping targets') {
             steps {
-                dir('Lab 3/ansible') {
+                dir('labs/lab-3-ansible/ansible') {
                     sh '''
                         ansible -i inventory-jenkins.ini all -m ping
                     '''
@@ -43,7 +43,7 @@ pipeline {
 
         stage('Run Ansible action') {
             steps {
-                dir('Lab 3/ansible') {
+                dir('labs/lab-3-ansible/ansible') {
                     script {
                         if (params.ACTION == 'ping') {
                             sh 'ansible -i inventory-jenkins.ini all -m ping'
