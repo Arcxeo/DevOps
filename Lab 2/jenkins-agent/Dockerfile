@@ -1,15 +1,13 @@
 FROM node:20-bookworm-slim AS node
 
-FROM jenkins/inbound-agent:latest-jdk21
+FROM jenkins/agent:latest-jdk21
 
 USER root
 
-# Récupération de Node.js et npm depuis l’image officielle Node
 COPY --from=node /usr/local/ /usr/local/
 
-# Installation de Git et du client Docker
 RUN apt-get update \
-    && apt-get install -y ca-certificates curl gnupg git \
+    && apt-get install -y ca-certificates curl gnupg git openssh-client \
     && install -m 0755 -d /etc/apt/keyrings \
     && curl -fsSL https://download.docker.com/linux/debian/gpg \
        -o /etc/apt/keyrings/docker.asc \
@@ -20,6 +18,10 @@ RUN apt-get update \
        > /etc/apt/sources.list.d/docker.list \
     && apt-get update \
     && apt-get install -y docker-ce-cli docker-buildx-plugin \
+    && mkdir -p /tmp/jenkins-agent \
+    && chown -R jenkins:jenkins /tmp/jenkins-agent \
     && rm -rf /var/lib/apt/lists/*
 
 USER jenkins
+
+WORKDIR /tmp/jenkins-agent

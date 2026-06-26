@@ -1,0 +1,197 @@
+pipeline {
+    agent {
+        label 'docker-dynamic-agent'
+    }
+
+    options {
+        disableConcurrentBuilds()
+        skipDefaultCheckout(true)
+        timestamps()
+    }
+
+    environment {
+        DOCKER_HOST = 'tcp://192.168.56.20:2375'
+
+        IMAGE_NAME = 'arnaudve/devops-lab02'
+        IMAGE_TAG = "build-${BUILD_NUMBER}"
+
+        APP_DIR = 'Lab 2/app'
+
+        PROD_HOST = '192.168.56.30'
+        APP_PORT = '3000'
+        CONTAINER_NAME = 'devops-final-app'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Prepare Scripts') {
+            steps {
+                sh '''
+                    sed -i 's/\r$//' final-project/scripts/*.sh
+                    chmod +x final-project/scripts/*.sh
+                '''
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        npm ci
+                    '''
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        npm test -- --runInBand
+                    '''
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    docker build \
+                        -t "${IMAGE_NAME}:${IMAGE_TAG}" \
+                        -t "${IMAGE_NAME}:latest" \
+                        "${APP_DIR}"
+                '''
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKERHUB_USER',
+                        passwordVariable: 'DOCKERHUB_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+
+                        echo "${DOCKERHUB_TOKEN}" | docker login \
+                            --username "${DOCKERHUB_USER}" \
+                            --password-stdin
+
+                        docker push "${IMAGE_NAME}:${IMAGE_TAG}"
+                        docker push "${IMAGE_NAME}:latest"
+
+                        docker logout || true
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Production') {
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'production-ssh-key',
+                        keyFileVariable: 'PROD_SSH_KEY',
+                        usernameVariable: 'PROD_SSH_USER'
+                    )
+                ]) {
+                    sh '''
+                        IMAGE_NAME="${IMAGE_NAME}" \
+                        IMAGE_TAG="${IMAGE_TAG}" \
+                        PROD_HOST="${PROD_HOST}" \
+                        PROD_USER="${PROD_SSH_USER}" \
+                        SSH_KEY="${PROD_SSH_KEY}" \
+                        CONTAINER_NAME="${CONTAINER_NAME}" \
+                        APP_PORT="${APP_PORT}" \
+                        final-project/scripts/deploy-production.sh
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Production') {
+            steps {
+                sh '''
+                    PROD_HOST="${PROD_HOST}" \
+                    APP_PORT="${APP_PORT}" \
+                    final-project/scripts/verify-production.sh
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                notifyDiscord('SUCCESS')
+            }
+        }
+
+        failure {
+            script {
+                notifyDiscord('FAILURE')
+            }
+        }
+
+        always {
+            sh '''
+                docker logout || true
+            '''
+        }
+    }
+}
+
+def notifyDiscord(String status) {
+    withCredentials([
+        string(
+            credentialsId: 'discord-webhook-url',
+            variable: 'DISCORD_WEBHOOK_URL'
+        )
+    ]) {
+        sh """
+            if [ "${status}" = "SUCCESS" ]; then
+                COLOR=3066993
+                MESSAGE="✅ Jenkins pipeline succeeded"
+            else
+                COLOR=15158332
+                MESSAGE="❌ Jenkins pipeline failed"
+            fi
+
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d "{
+                       \\"embeds\\": [{
+                         \\"title\\": \\"DevOps Final Project\\",
+                         \\"description\\": \\"${MESSAGE}\\",
+                         \\"color\\": ${COLOR},
+                         \\"fields\\": [
+                           {
+                             \\"name\\": \\"Job\\",
+                             \\"value\\": \\"${env.JOB_NAME}\\",
+                             \\"inline\\": true
+                           },
+                           {
+                             \\"name\\": \\"Build\\",
+                             \\"value\\": \\"#${env.BUILD_NUMBER}\\",
+                             \\"inline\\": true
+                           },
+                           {
+                             \\"name\\": \\"Image\\",
+                             \\"value\\": \\"${env.IMAGE_NAME}:${env.IMAGE_TAG}\\",
+                             \\"inline\\": false
+                           }
+                         ]
+                       }]
+                     }" \
+                 "${DISCORD_WEBHOOK_URL}"
+        """
+    }
+}
