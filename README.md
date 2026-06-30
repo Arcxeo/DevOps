@@ -2,7 +2,7 @@
 
 ## Group
 
-Nicolas PAPLEUX, Romain DANGIN, Ali BALHASSEN, Nail FAHIM, Arnaud VAN EECKHOVEN
+Nicolas PAPLEUX, Romain DANGIN, Ali BELHASSEN, Nail FAHIM, Arnaud VAN EECKHOVEN
 
 ## Project objective
 
