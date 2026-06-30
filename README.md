@@ -132,6 +132,33 @@ SSH Agent / SSH Credentials
 
 ## Virtual machines
 
+### VM1 - Jenkins Controller
+
+Path:
+
+```text
+labs/lab-1-basic-ci-cd
+```
+
+Start VM1:
+
+```bash
+cd labs/lab-1-basic-ci-cd
+vagrant up
+```
+
+VM1 configuration:
+
+```text
+IP: 192.168.56.10
+Jenkins port: localhost:8080
+Optional application test port: localhost:3000
+Memory: 4096 MB
+CPU: 2
+```
+VM1 hosts Jenkins and acts as the CI/CD pipeline orchestrator.
+It does not execute the final pipeline directly: the final build runs on a temporary Docker agent created on VM2.
+
 ### VM2 - Docker agent host
 
 Path:
