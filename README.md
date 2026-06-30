@@ -189,6 +189,9 @@ cd /vagrant/jenkins-agent
 docker build --no-cache -t devops-jenkins-agent:v2 .
 ```
 
+VM2 hosts Docker and acts as the remote execution environment for Jenkins agents.  
+During the final pipeline, Jenkins dynamically creates a temporary Docker agent on VM2 to run the build, tests and Docker image creation.
+
 ### VM3 - Production server
 
 Path:
@@ -211,6 +214,9 @@ IP: 192.168.56.30
 Application port inside VM: 3000
 Forwarded host port: localhost:3002
 ```
+
+VM3 is the production server.
+It only hosts the deployed application container and its configuration; Jenkins connects to it by SSH to pull the new Docker image and restart the application.
 
 ## Jenkins configuration
 
